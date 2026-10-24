@@ -42,5 +42,19 @@
     }
   };
 
+  Git.prototype.checkout = function(branchName){
+    const existing = this.branches.find(b => b.name === branchName);
+    if (existing){
+      this.HEAD = existing;
+      console.log(`Switched to branch: ${branchName}`);
+    } else {
+      const newBranch = new Branch(branchName, this.HEAD.commit);
+      this.branches.push(newBranch);
+      this.HEAD = newBranch;
+      console.log(`Switched to new branch: ${branchName}`);
+    }
+    return this;
+  };
+
   window.Git = Git;
 })();
