@@ -35,7 +35,6 @@ else if (command === "branch") {
     console.log(`* \x1b[32m${branchAtual}\x1b[0m  `, branchesString);
   } 
   else{
-  
     if (args[0][0] === '-'){
     switch (args[0][1]){
       case ('d'):
@@ -75,6 +74,54 @@ else if (command === "branch") {
       }
       fs.writeFileSync(caminhoNovaBranch, commitHash === '' ? '' : `${commitHash}\n`);
       console.log(`Branch '\x1b[32m${novaBranch}\x1b[0m' criada com sucesso apontando para '${branchAtual}'!`);
+    }
+  }
+}
+else if (command === "checkout") {
+  let branchAtual = fs.readFileSync('.minigit/HEAD', 'utf8').trim().replace('ref: refs/heads/', "");
+  if (args.length === 0) {
+    // deve funcionar igual ao git status
+  }
+  else {
+    if (args[0][0] === '-'){
+      switch (args[0][1]) {
+        case ('b'):
+          const novaBranch = args[1];
+          if (!novaBranch){
+            console.log("Erro: Especifique a branch. Ex: minigit checkout -b <nome-da-branch>");
+            process.exit(1);
+          }
+          const caminhoNovaBranch = path.join(baseDir, 'refs', 'heads', novaBranch);
+          const caminhoBranchAtiva = path.join(baseDir, 'refs', 'heads', branchAtual);
+          if (fs.existsSync(caminhoNovaBranch)) {
+            console.log(`Erro: A branch '\x1b[32m${novaBranch}\x1b[0m' já existe!`);
+            process.exit(1);
+          }
+
+          let commitHash = '';
+
+          if (fs.existsSync(caminhoBranchAtiva)) {
+            commitHash = fs.readFileSync(caminhoBranchAtiva, 'utf-8').trim();
+          }
+          fs.writeFileSync(caminhoNovaBranch, commitHash === '' ? '' : `${commitHash}\n`);
+          fs.writeFileSync('.minigit/HEAD', `ref: refs/heads/${novaBranch}`);
+          console.log(`Switched to a new branch '\x1b[32m${novaBranch}\x1b[0m' apontando para '${branchAtual}'!`);
+
+      }
+    }
+    else {
+      const novaBranch = args[0];
+      if (!novaBranch){
+        console.log("Erro: Especifique a branch. Ex: minigit checkout <nome-da-branch>");
+        process.exit(1);
+      }
+      const caminhoNovaBranch = path.join(baseDir, 'refs', 'heads', novaBranch);
+      if (!fs.existsSync(caminhoNovaBranch)) {
+        console.log(`Erro: A branch '\x1b[32m${novaBranch}\x1b[0m' não existe!`);
+        process.exit(1);
+      }
+      fs.writeFileSync('.minigit/HEAD', `ref: refs/heads/${novaBranch}`);
+      console.log(`Switched to branch '\x1b[32m${novaBranch}\x1b[0m'`);
     }
   }
 }
