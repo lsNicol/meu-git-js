@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import fs from "fs";
 import path from 'path';
+import zlib from "zlib"; // compactar
+import { sha1 } from './sha1.js';
 
 const [,, command, ...args] = process.argv;
 const baseDir = '.minigit';
@@ -47,7 +49,7 @@ function cmdInit(args) {
 function cmdBranch(args) {
   let branchAtual = lerBranchAtual();
   if (args.length === 0){
-    const branchesList = fs.readdirSync('.minigit/refs/heads').filter(file => file != branchAtual);
+    const branchesList = fs.readdirSync(path.join(baseDir, 'refs', 'heads')).filter(file => file != branchAtual);
     const branchesString = branchesList.join("   ");
     console.log(`* \x1b[32m${branchAtual}\x1b[0m  `, branchesString);
   }
@@ -81,7 +83,7 @@ function cmdBranch(args) {
       const caminhoBranchAtual = refPath(branchAtual);
 
       if (pathExists(caminhoNovaBranch)) {
-        erro(`Erro: A branch '${novaBranch}' já existe!`);
+        erro(`Erro: A branch '\x1b[32m${novaBranch}\x1b[0m' já existe!`);
       }
 
       let commitHash = lerHashDaBranch(caminhoBranchAtual);
@@ -133,12 +135,33 @@ function cmdCheckout(args) {
     }
   }
 }
+function salvarObjeto(conteudo, hash){
+  const caminhoPasta = path.join(baseDir, "objects", hash.slice(0, 2));
+  const caminhoObj = path.join(caminhoPasta, hash.slice(2));
+  if (pathExists(caminhoObj)) return;
+  fs.mkdirSync(caminhoPasta, { recursive: true });
+  fs.writeFileSync(caminhoObj, zlib.deflateSync(conteudo));
+}
+
+function cmdHashObj(args, tipo = "blob"){
+  const escrever = args.includes("-w");
+  const files = args.filter((a) => a[0] != '-');
+  if (files.length === 0) erro("Erro: especifique o arquivo a ser hasheado. ex: minigit hash-object <nome-do-arquivo>");
+  for (const nome of files) {
+    const conteudo = fs.readFileSync(nome); // Buffer, sem 'utf8'
+    const contCompleto = Buffer.concat([Buffer.from(`${tipo} ${conteudo.length}\0`), conteudo]);
+    const hash = sha1(contCompleto);
+    console.log(hash);
+    if (escrever) salvarObjeto(contCompleto, hash);
+  }
+}
 
 // ---------- dispatcher ----------
 const comandos = {
   init: cmdInit,
   branch: cmdBranch,
   checkout: cmdCheckout,
+  "hash-object": cmdHashObj
 };
 
 const executar = comandos[command];
