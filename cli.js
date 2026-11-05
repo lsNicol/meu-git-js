@@ -18,6 +18,25 @@ function erro(msg) {
 const refPath = (nome) => path.join(baseDir, 'refs', 'heads', nome);
 const pathExists = (path) => fs.existsSync(path);
 
+function obterTodosArquivos(dir = '.', listaDeArquivos = []) {
+  const arquivos = fs.readdirSync(dir);
+
+  for (const arquivo of arquivos) {
+    const caminhoCompleto = path.join(dir, arquivo);
+    const proibidos = ['.minigit', '.gitignore', '.git', 'node_modules', '.claude'];
+    if (proibidos.includes(arquivo)) {
+      continue;
+    }
+
+    const stats = fs.statSync(caminhoCompleto);
+    if (stats.isDirectory()) {
+      obterTodosArquivos(caminhoCompleto, listaDeArquivos);
+    } else {
+      listaDeArquivos.push(caminhoCompleto.replace(/\\/g, '/'));
+    }
+  }
+  return listaDeArquivos;
+}
 function lerHashDaBranch(path){
   return (pathExists(path) ? fs.readFileSync(path, 'utf-8').trim() : "");
 }
