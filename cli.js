@@ -135,27 +135,32 @@ function cmdCheckout(args) {
     }
   }
 }
-function salvarObjeto(conteudo, hash){
+
+function salvarObjeto(contCompleto, hash){
   const caminhoPasta = path.join(baseDir, "objects", hash.slice(0, 2));
   const caminhoObj = path.join(caminhoPasta, hash.slice(2));
   if (pathExists(caminhoObj)) return;
   fs.mkdirSync(caminhoPasta, { recursive: true });
-  fs.writeFileSync(caminhoObj, zlib.deflateSync(conteudo));
+  fs.writeFileSync(caminhoObj, zlib.deflateSync(contCompleto));
 }
 
-function cmdHashObj(args, tipo = "blob"){
+function cmdHashObj(args){
   const escrever = args.includes("-w");
   const files = args.filter((a) => a[0] != '-');
-  if (files.length === 0) erro("Erro: especifique o arquivo a ser hasheado. ex: minigit hash-object <nome-do-arquivo>");
+  if (files.length === 0) erro("Erro: Especifique o arquivo a ser hasheado. ex: minigit hash-object <nome-do-arquivo>");
   for (const nome of files) {
-    const conteudo = fs.readFileSync(nome); // Buffer, sem 'utf8'
-    const contCompleto = Buffer.concat([Buffer.from(`${tipo} ${conteudo.length}\0`), conteudo]);
-    const hash = sha1(contCompleto);
+    const hash = hashearObjeto(nome, escrever);
     console.log(hash);
-    if (escrever) salvarObjeto(contCompleto, hash);
   }
 }
 
+function hashearObjeto(nome, escrever = false, tipo = "blob"){
+  const conteudo = fs.readFileSync(nome); // Buffer, sem 'utf8'
+  const contCompleto = Buffer.concat([Buffer.from(`${tipo} ${conteudo.length}\0`), conteudo]);
+  const hash = sha1(contCompleto);
+  if (escrever) salvarObjeto(contCompleto, hash);
+  return hash;
+}
 // ---------- dispatcher ----------
 const comandos = {
   init: cmdInit,
