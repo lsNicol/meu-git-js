@@ -37,6 +37,22 @@ function obterTodosArquivos(dir = '.', listaDeArquivos = []) {
   }
   return listaDeArquivos;
 }
+function lerIndex(){
+  const indexPath = ".minigit/index";
+  let indexEntries = {};
+
+  if (fs.existsSync(indexPath)) {
+    const conteudo = fs.readFileSync(indexPath, 'utf-8');
+    conteudo.split("\n").forEach(linha => {
+      if (!linha.trim()) return;
+      const [mode, hash, ...pathParts] = linha.split(" ");
+      const caminho = pathParts.join(" ");
+      indexEntries[caminho] = { mode, hash };
+    });
+  }
+  return indexEntries;
+}
+
 function lerHashDaBranch(path){
   return (pathExists(path) ? fs.readFileSync(path, 'utf-8').trim() : "");
 }
