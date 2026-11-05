@@ -233,12 +233,58 @@ function cmdAdd(args) {
   fs.writeFileSync(indexPath, novasLinhas.join('\n') + '\n', 'utf-8');
 }
 
+function cmdStatus(args){
+  const index = lerIndex();
+  const naPasta = obterTodosArquivos();
+  const modificados = [], deletados = [], naoRastreados = [];
+  
+  // Oque está no index mas nao na pasta / oq foi alterado do index
+  for (const caminho of Object.keys(index)){
+    if (!pathExists(caminho))
+      deletados.push(caminho);
+    else if (hashearObjeto(caminho) !== index[caminho].hash)
+      modificados.push(caminho);
+  }
+
+  // Oque nn está no index mas está na pasta
+  for (const caminho of naPasta){
+    if (!(caminho in index))
+      naoRastreados.push(caminho);
+  }
+
+  const branchAtual = lerBranchAtual();
+  console.log(`Na branch ${branchAtual}`);
+  console.log(`Sua branch está em dia com 'origin/master'.\n`)
+  const staged = Object.keys(index);
+  if (staged.length > 0){
+    console.log('Alterações a serem commitadas:');
+    staged.forEach((c) => console.log(verde(`\tnew file:   ${c}`)));
+    console.log("");
+  }
+
+  if (modificados.length + deletados.length > 0) {
+    console.log('Alterações não stageadas para commit:');
+    modificados.forEach((c) => console.log(vermelho(`\tmodified:   ${c}`)));
+    deletados.forEach((c) => console.log(vermelho(`\tdeleted:    ${c}`)));
+    console.log();
+  }
+
+  if (naoRastreados.length > 0) {
+    console.log('Arquivos não rastreados:');
+    naoRastreados.forEach((c) => console.log(vermelho(`\t${c}`)));
+    console.log();
+  }
+  if (staged.length + modificados.length + deletados.length + naoRastreados.length === 0) {
+    console.log('nada para commitar, tree de trabalho limpa');
+  }
+}
 // ---------- dispatcher ----------
 const comandos = {
   init: cmdInit,
   branch: cmdBranch,
   checkout: cmdCheckout,
   add: cmdAdd,
+  status: cmdStatus,
   "hash-object": cmdHashObj
 };
 
