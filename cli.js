@@ -196,11 +196,49 @@ function hashearObjeto(nome, escrever = false, tipo = "blob"){
   if (escrever) salvarObjeto(contCompleto, hash);
   return hash;
 }
+function cmdAdd(args) {
+  let indexEntries = lerIndex();
+  const adicionarTudo = args.includes(".");
+  let files = args.filter((arq) => arq[0] !== '-'); 
+
+  if (adicionarTudo) {
+    files = obterTodosArquivos(); 
+  }
+
+  if (files.length === 0) {
+    erro("Erro: Especifique o arquivo. Nada adicionado ao stage.");
+  }
+
+  for (const nome of files) {
+    if (!fs.existsSync(nome)) {
+      console.warn(`Aviso: Arquivo '${nome}' não existe.`);
+      continue;
+    }
+
+    const stats = fs.statSync(nome);
+    // Identificar permissão no Linux (100755 para executáveis, 100644 para normais)
+    const mode = (stats.mode & 0o111) ? "100755" : "100644";
+    const hash = hashearObjeto(nome, true, "blob");
+    
+    indexEntries[nome] = { mode, hash };
+    console.log(`Adicionado: ${nome} -> ${hash.slice(0, 8)}`);
+  }
+
+  const novasLinhas = Object.keys(indexEntries).map(caminho => {
+    const entry = indexEntries[caminho];
+    return `${entry.mode} ${entry.hash} ${caminho}`;
+  });
+  novasLinhas.sort(); 
+
+  fs.writeFileSync(indexPath, novasLinhas.join('\n') + '\n', 'utf-8');
+}
+
 // ---------- dispatcher ----------
 const comandos = {
   init: cmdInit,
   branch: cmdBranch,
   checkout: cmdCheckout,
+  add: cmdAdd,
   "hash-object": cmdHashObj
 };
 
