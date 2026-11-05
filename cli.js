@@ -6,6 +6,7 @@ import { sha1 } from './sha1.js';
 
 const [,, command, ...args] = process.argv;
 const baseDir = '.minigit';
+const indexPath = path.join(baseDir, 'index');
 
 const verde = (txt) => `\x1b[32m${txt}\x1b[0m`;
 const vermelho = (txt) => `\x1b[31m${txt}\x1b[0m`;
@@ -38,7 +39,6 @@ function obterTodosArquivos(dir = '.', listaDeArquivos = []) {
   return listaDeArquivos;
 }
 function lerIndex(){
-  const indexPath = ".minigit/index";
   let indexEntries = {};
 
   if (fs.existsSync(indexPath)) {
