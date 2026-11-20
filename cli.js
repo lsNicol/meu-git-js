@@ -171,6 +171,17 @@ function cmdCheckout(args) {
   }
 }
 
+function criarObjeto(tipo, conteudoBuffer, escrever = true) {
+  const header = Buffer.from(`${tipo} ${conteudoBuffer.length}\0`);
+  const contCompleto = Buffer.concat([header, conteudoBuffer]);
+  const hash = sha1(contCompleto);
+  
+  if (escrever) {
+    salvarObjeto(contCompleto, hash);
+  }
+  return hash;
+}
+
 function salvarObjeto(contCompleto, hash){
   const caminhoPasta = path.join(baseDir, "objects", hash.slice(0, 2));
   const caminhoObj = path.join(caminhoPasta, hash.slice(2));
@@ -189,13 +200,11 @@ function cmdHashObj(args){
   }
 }
 
-function hashearObjeto(nome, escrever = false, tipo = "blob"){
-  const conteudo = fs.readFileSync(nome); // Buffer, sem 'utf8'
-  const contCompleto = Buffer.concat([Buffer.from(`${tipo} ${conteudo.length}\0`), conteudo]);
-  const hash = sha1(contCompleto);
-  if (escrever) salvarObjeto(contCompleto, hash);
-  return hash;
+function hashearObjeto(nome, escrever = false, tipo = "blob") {
+  const conteudo = fs.readFileSync(nome);
+  return criarObjeto(tipo, conteudo, escrever);
 }
+
 function cmdAdd(args) {
   let indexEntries = lerIndex();
   const adicionarTudo = args.includes(".");
