@@ -223,14 +223,47 @@ function cmdAdd(args) {
     indexEntries[nome] = { mode, hash };
     console.log(`Adicionado: ${nome} -> ${hash.slice(0, 8)}`);
   }
+  gravarNewIndex(indexEntries);
+}
 
-  const novasLinhas = Object.keys(indexEntries).map(caminho => {
-    const entry = indexEntries[caminho];
+function gravarNewIndex(newIndex){
+  const novasLinhas = Object.keys(newIndex).map(caminho => {
+    const entry = newIndex[caminho];
     return `${entry.mode} ${entry.hash} ${caminho}`;
   });
   novasLinhas.sort(); 
+  const conteudoFinal = novasLinhas.length > 0 ? novasLinhas.join('\n') + '\n' : '';
+  fs.writeFileSync(indexPath, conteudoFinal, 'utf-8');
+}
 
-  fs.writeFileSync(indexPath, novasLinhas.join('\n') + '\n', 'utf-8');
+function cmdRestore(args) {
+  const index = lerIndex();
+  const branchAtual = lerBranchAtual();
+  const lastCommit = lerHashDaBranch(refPath(branchAtual));
+
+  const adicionarTudo = args.includes(".");
+  const isStaged = args.includes("--staged");
+  const alvos = args.filter((arq) => arq[0] !== '-');
+  let files = alvos;
+
+  if (adicionarTudo) {
+    files = obterTodosArquivos();
+  }
+
+  if (isStaged) {
+    if (alvos.length === 0) {
+      erro("Erro: Especifique o arquivo para remover do stage.");
+    }
+
+    for (const arquivo of files){
+      if (lastCommit && lastCommit.includes(arquivo)) {
+        // lógica pra comparar com ultimo commit
+      } else {
+        delete index[arquivo];
+      }
+    }
+    gravarNewIndex(index);
+  }
 }
 
 function cmdStatus(args){
@@ -284,6 +317,7 @@ const comandos = {
   branch: cmdBranch,
   checkout: cmdCheckout,
   add: cmdAdd,
+  restore: cmdRestore,
   status: cmdStatus,
   "hash-object": cmdHashObj
 };
