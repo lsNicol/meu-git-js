@@ -229,10 +229,75 @@ function cmdAdd(args) {
     const mode = (stats.mode & 0o111) ? "100755" : "100644";
     const hash = hashearObjeto(nome, true, "blob");
     
-    indexEntries[nome] = { mode, hash };
-    console.log(`Adicionado: ${nome} -> ${hash.slice(0, 8)}`);
+    // Normaliza para o formato do index: barras "/" e sem "./" no início
+    const caminho = path.posix.normalize(nome.replace(/\\/g, '/'));
+    indexEntries[caminho] = { mode, hash };
+    console.log(`Adicionado: ${caminho} -> ${hash.slice(0, 8)}`);
   }
   gravarNewIndex(indexEntries);
+}
+
+function cmdWriteTree(){
+  const treeHash = gerarTreeIndex();
+  console.log(treeHash);
+}
+
+function gerarTreeIndex(){
+  const index = lerIndex();
+  // Object.create(null): sem protótipo, então pastas como "constructor" funcionam
+  const raiz = Object.create(null);
+  for (const caminho of Object.keys(index)){
+    const dados = index[caminho];
+    const partes = caminho.split('/');
+    let atual = raiz;
+    
+    for (let i = 0; i < partes.length; i++){
+      const parte = partes[i];
+      const isBlob = i === partes.length-1;
+      if (isBlob){
+        atual[parte] = {
+          tipo: "blob",
+          mode: dados.mode,
+          hash: dados.hash
+        };
+      } else {
+        if (!atual[parte]) atual[parte] = Object.create(null);
+        atual = atual[parte];
+      }
+    }
+  }
+  return salvarNoTree(raiz);
+}
+
+function salvarNoTree(raiz){
+  const entries = [];
+  for (const nome of Object.keys(raiz)){
+    const item = raiz[nome];
+    if (item.tipo === 'blob'){
+      entries.push({
+        mode: item.mode,
+        nome,
+        hash: item.hash
+      });
+    } else{
+      const hashSubTree = salvarNoTree(item);
+      entries.push({
+        mode: '40000',
+        nome,
+        hash: hashSubTree
+      });
+    }
+  }
+  // Git ordena byte a byte, e pastas são comparadas como "nome/"
+  const chaveOrdenacao = (e) => Buffer.from(e.mode === '40000' ? e.nome + '/' : e.nome);
+  entries.sort((a, b) => Buffer.compare(chaveOrdenacao(a), chaveOrdenacao(b)));
+  const buffers = entries.map(e => {
+    const inicio = Buffer.from(`${e.mode} ${e.nome}\0`, 'utf8');
+    const hash20Bytes = Buffer.from(e.hash, 'hex');
+    return Buffer.concat([inicio, hash20Bytes]);
+  });
+  const corpoBinario = Buffer.concat(buffers);
+  return criarObjeto('tree', corpoBinario, true);
 }
 
 function gravarNewIndex(newIndex){
@@ -326,6 +391,7 @@ const comandos = {
   branch: cmdBranch,
   checkout: cmdCheckout,
   add: cmdAdd,
+  'write-tree': cmdWriteTree,
   restore: cmdRestore,
   status: cmdStatus,
   "hash-object": cmdHashObj
